@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      width: 300px;
+      font-family: Arial, sans-serif;
+      padding: 14px;
+      background: #121212;
+      color: #f1f1f1;
+    }
+    h3 { margin: 0 0 10px; font-size: 16px; color: #4ade80; }
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 7px 9px;
+      border-radius: 5px;
+      font-size: 12px;
+      color: #38bdf8;
+      margin-bottom: 10px;
+      word-break: break-all;
+    }
+    label { font-size: 12px; color: #aaa; display: block; margin-bottom: 4px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 7px;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #1e1e1e;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #saveNameBtn { background: #2563eb; color: white; }
+    #downloadBtn { background: #16a34a; color: white; }
+    #clearBtn { background: #dc2626; color: white; }
+    .stats { font-size: 12px; color: #9ca3af; margin-top: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h3>Website Activity Tracker</h3>
+
+  <div class="badge" id="detectedInfo">Active Identity: Detecting...</div>
+
+  <div class="row">
+    <span>Auto-Detect Email / Profile:</span>
+    <input type="checkbox" id="autoDetectToggle" checked />
+  </div>
+
+  <label for="userName">Manual Override Name (Optional):</label>
+  <input type="text" id="userName" placeholder="Leave blank for auto-detect..." />
+  <button id="saveNameBtn">Save Manual Name</button>
+
+  <div class="row">
+    <span>Tracking Active:</span>
+    <input type="checkbox" id="trackingToggle" checked />
+  </div>
+
+  <button id="downloadBtn">Download CSV Report</button>
+  <button id="clearBtn">Clear All Logs</button>
+
+  <div class="stats" id="logCount">Total Recorded Events: 0</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
