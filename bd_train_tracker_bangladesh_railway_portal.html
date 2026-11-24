@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BD Train Tracker — Bangladesh Railway Schedule & Platform Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bd: {
+              green: '#006A4E',
+              greenDark: '#004D38',
+              greenLight: '#E6F4F0',
+              red: '#F42A41',
+              redLight: '#FEF2F2',
+              brass: '#D97706',
+              brassLight: '#FFFBEB',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      overflow-x: hidden;
+    }
+    /* Subtle railway track & Bangladeshi heritage geometric motif */
+    .railway-hero-bg {
+      background-color: #004D38;
+      background-image: 
+        radial-gradient(circle at 88% 22%, rgba(244, 42, 65, 0.22) 0%, transparent 32%),
+        radial-gradient(circle at 12% 85%, rgba(217, 119, 6, 0.16) 0%, transparent 40%),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.03) 0px,
+          rgba(255, 255, 255, 0.03) 2px,
+          transparent 2px,
+          transparent 28px
+        ),
+        linear-gradient(135deg, #004230 0%, #006A4E 55%, #065F46 100%);
+    }
+    .track-divider {
+      height: 6px;
+      background-image: repeating-linear-gradient(
+        90deg,
+        #006A4E 0px,
+        #006A4E 14px,
+        #D97706 14px,
+        #D97706 18px,
+        transparent 18px,
+        transparent 26px
+      );
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-bd-green selection:text-white">
+
+  <!-- Toast Notification Banner (Replaces alert()) -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-center justify-between py-3 gap-3">
+        
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('passenger')">
+          <div class="relative w-11 h-11 rounded-xl bg-bd-green flex items-center justify-center shadow-md shadow-bd-green/20 shrink-0">
+            <!-- Bangladeshi Red Sun + Railway Locomotive/Track Emblem -->
+            <svg class="w-7 h-7" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="23" cy="12" r="6" fill="#F42A41"/>
+              <path d="M8 22C8 17.5817 11.5817 14 16 14H22C24.2091 14 26 15.7909 26 18V23H8V22Z" fill="white"/>
+              <rect x="11" y="16.5" width="4.5" height="3.5" rx="1" fill="#006A4E"/>
+              <rect x="17" y="16.5" width="5.5" height="3.5" rx="1" fill="#006A4E"/>
+              <circle cx="12.5" cy="24.5" r="2" fill="#FBBF24"/>
+              <circle cx="21.5" cy="24.5" r="2" fill="#FBBF24"/>
+              <path d="M5 28.5H31" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 31.5H28" stroke="white" stroke-opacity="0.7" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 3"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-display font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">BD Train <span class="text-bd-green">Tracker</span></span>
+              <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-bd-greenLight text-bd-green border border-bd-green/20">MVP v1.0</span>
+            </div>
+            <p class="text-xs text-slate-500 font-medium">Bangladesh Railway Schedule &amp; Platform Portal</p>
+          </div>
+        </div>
+
+        <!-- Center Navigation Tabs -->
+        <nav class="order-3 lg:order-2 w-full lg:w-auto flex items-center justify-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+          <button id="tab-passenger" onclick="switchTab('passenger')" class="nav-tab flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-white text-bd-green shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+            <span>Train Search &amp; Schedules</span>
+          </button>
+          <button id="tab-weather" onclick="switchTab('weather')" class="nav-tab flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+            <span>Station Weather &amp; Alerts</span>
+          </button>
+          <button id="tab-staff" onclick="switchTab('staff')" class="nav-tab flex-1 lg:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Staff &amp; Admin Portal</span>
+          </button>
+        </nav>
+
+        <!-- Right Controls: Live RBAC Role Switcher & Notification Bell -->
+        <div class="order-2 lg:order-3 flex items-center gap-2.5">
+          <!-- Interactive Role Switcher for Live CSE 3292 Demo -->
+          <div class="flex items-center bg-amber-50/90 border border-amber-200 rounded-xl px-2.5 py-1.5 gap-2">
+            <span class="hidden sm:inline text-[11px] font-bold uppercase tracking-wider text-amber-800">RBAC Role:</span>
+            <select id="roleSelector" onchange="handleRoleChange(this.value)" aria-label="Select Active User Role" class="bg-transparent text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none cursor-pointer pr-1">
+              <option value="passenger">Passenger (Tanvir Ahmed)</option>
+              <option value="station_master">Station Master (SM Rafiqul Islam)</option>
+              <option value="data_manager">Data Manager (Nusrat Jahan)</option>
+              <option value="admin">System Admin (Masuma Sadia)</option>
+            </select>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="relative">
+            <button id="notifButton" onclick="toggleNotifDrawer()" class="relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition" aria-label="Notifications">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              <span id="notifBadge" class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-bd-red text-white font-mono text-[11px] font-bold flex items-center justify-center shadow">3</span>
+            </button>
+
+            <!-- Dropdown Notification Feed -->
+            <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
+              <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900">Subscribed Train Alerts</h3>
+                  <p class="text-[11px] text-slate-500">Live platform, schedule &amp; weather updates</p>
+                </div>
+                <button onclick="markAllRead()" class="text-xs font-semibold text-bd-green hover:underline">Mark read</button>
+              </div>
+              <div id="notifList" class="max-h-80 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Active Role Context Bar -->
+  <div id="roleContextBar" class="bg-slate-900 text-white text-xs py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="roleBannerText" class="font-medium text-slate-200">Logged in as <strong>Tanvir Ahmed (Passenger)</strong> — Search schedules, verify platform numbers &amp; subscribe to train alerts.</span>
+      </div>
+      <div class="flex items-center gap-3 text-slate-400 font-mono text-[11px]">
+        <span>PostgreSQL RBAC Active</span>
+        <span>•</span>
+        <span id="liveClock">--:--:-- BST</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1">
+
+    <!-- ========================================================= -->
+    <!-- VIEW 1: PASSENGER VIEW — TRAIN SEARCH & SCHEDULE EXPLORER -->
+    <!-- ========================================================= -->
+    <section id="view-passenger" class="block">
+      <!-- Hero Banner -->
+      <div class="railway-hero-bg text-white relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+          <div class="max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-xs font-semibold text-emerald-100 mb-3">
+              <span class="w-2 h-2 rounded-full bg-bd-red"></span>
+              <span>Centralized Bangladesh Railway Information System</span>
+            </div>
+            <h1 class="font-display text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              Verified Train Schedules, Live Platforms &amp; Station Weather in One Place
+            </h1>
+            <p class="mt-2.5 text-sm sm:text-base text-emerald-100/90 max-w-2xl">
+              Eliminate platform confusion and scattered timetables. Search intercity routes across Bangladesh and get Station Master-confirmed platform numbers in real time.
+            </p>
+          </div>
+
+          <!-- Search Widget Card -->
+          <div class="mt-6 bg-white rounded-2xl p-4 sm:p-6 shadow-xl text-slate-900 border border-white/20">
+            <form id="searchForm" onsubmit="handleTrainSearch(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+              <!-- From Station -->
+              <div class="lg:col-span-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">From Station</label>
+                <div class="relative">
+                  <select id="fromStation" class="w-full rounded-xl border border-slate-300 bg-slate-50 hover:bg-white px-3.5 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green focus:border-bd-green transition">
+                    <option value="All">All Origin Stations</option>
+                    <option value="Dhaka Kamalapur" selected>Dhaka Kamalapur</option>
+                    <option value="Biman Bandar">Biman Bandar</option>
+                    <option value="Chattogram">Chattogram</option>
+                    <option value="Sylhet">Sylhet</option>
+                    <option value="Rajshahi">Rajshahi</option>
+                    <option value="Khulna">Khulna</option>
+                    <option value="Dinajpur">Dinajpur</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Swap Button (Desktop/Mobile) -->
+              <div class="lg:col-span-1 flex justify-center">
+                <button type="button" onclick="swapStations()" title="Swap Stations" class="w-full sm:w-11 h-11 rounded-xl border border-slate-200 bg-slate-100 hover:bg-bd-greenLight hover:text-bd-green hover:border-bd-green/30 flex items-center justify-center text-slate-600 transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- To Station -->
+              <div class="lg:col-span-3">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">To Station</label>
+                <select id="toStation" class="w-full rounded-xl border border-slate-300 bg-slate-50 hover:bg-white px-3.5 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green focus:border-bd-green transition">
+                  <option value="All" selected>All Destinations (Show All)</option>
+                  <option value="Chattogram">Chattogram</option>
+                  <option value="Sylhet">Sylhet</option>
+                  <option value="Rajshahi">Rajshahi</option>
+                  <option value="Khulna">Khulna</option>
+                  <option value="Dinajpur">Dinajpur</option>
+                  <option value="Dhaka Kamalapur">Dhaka Kamalapur</option>
+                </select>
+              </div>
+
+              <!-- Journey Date -->
+              <div class="lg:col-span-2">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Journey Date</label>
+                <input type="date" id="journeyDate" value="2026-11-24" class="w-full rounded-xl border border-slate-300 bg-slate-50 hover:bg-white px-3 py-2.5 text-sm font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green" />
+              </div>
+
+              <!-- Search CTA -->
+              <div class="lg:col-span-2">
+                <button type="submit" class="w-full py-3 px-4 rounded-xl bg-bd-green hover:bg-bd-greenDark text-white font-bold text-sm shadow-md shadow-bd-green/25 flex items-center justify-center gap-2 transition active:scale-[0.99]">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                  <span>Search Trains</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Quick Route Chips -->
+            <div class="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500 mr-1">Popular Routes:</span>
+              <button type="button" onclick="applyQuickRoute('Dhaka Kamalapur', 'All')" class="px-3 py-1 rounded-full text-xs font-semibold bg-bd-greenLight text-bd-green border border-bd-green/20 hover:bg-bd-green hover:text-white transition">All from Dhaka</button>
+              <button type="button" onclick="applyQuickRoute('Dhaka Kamalapur', 'Chattogram')" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-bd-greenLight hover:text-bd-green transition">Dhaka → Chattogram</button>
+              <button type="button" onclick="applyQuickRoute('Dhaka Kamalapur', 'Sylhet')" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-bd-greenLight hover:text-bd-green transition">Dhaka → Sylhet</button>
+              <button type="button" onclick="applyQuickRoute('Dhaka Kamalapur', 'Rajshahi')" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-bd-greenLight hover:text-bd-green transition">Dhaka → Rajshahi</button>
+              <button type="button" onclick="applyQuickRoute('Dhaka Kamalapur', 'Khulna')" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-bd-greenLight hover:text-bd-green transition">Dhaka → Khulna</button>
+            </div>
+          </div>
+        </div>
+        <div class="track-divider w-full"></div>
+      </div>
+
+      <!-- Search Results Container -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h2 class="font-display text-xl font-bold text-slate-900 flex items-center gap-2">
+              <span id="resultsHeading">Intercity Train Schedules</span>
+              <span id="resultsCount" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-200 text-slate-800">6 Trains</span>
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Platform numbers are updated live by assigned Station Masters. "Not announced" indicates pending platform assignment.</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-slate-600">Filter:</label>
+            <select id="platformFilter" onchange="renderTrainCards()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-bd-green">
+              <option value="all">All Trains</option>
+              <option value="announced">Platform Confirmed Only</option>
+              <option value="subscribed">My Subscribed Trains</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Train Cards Grid -->
+        <div id="trainCardsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 2: STATION WEATHER & OFFICIAL RAILWAY NOTICES        -->
+    <!-- ========================================================= -->
+    <section id="view-weather" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="mb-6">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200 mb-2">
+          Live Station Telemetry &amp; Notices
+        </span>
+        <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">Railway Hub Weather &amp; Official Alerts</h2>
+        <p class="text-sm text-slate-600 mt-1">Real-time station weather conditions impacting train speeds (e.g., dense winter fog or monsoon rainfall) alongside verified notices.</p>
+      </div>
+
+      <!-- Weather Grid -->
+      <div id="weatherCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Official Notices & Delay Alerts Feed -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-bd-red animate-ping"></span>
+            <h3 class="font-display font-bold text-lg text-slate-900">Official Bangladesh Railway Notices &amp; Advisories</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-500">Synced with Central Control</span>
+        </div>
+        <div id="officialNoticesList" class="divide-y divide-slate-100">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- VIEW 3: ROLE-BASED STAFF & ADMIN PORTAL (RBAC DEMO)       -->
+    <!-- ========================================================= -->
+    <section id="view-staff" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Role Switcher Banner inside Staff Portal -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm mb-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-bd-greenLight text-bd-green">RBAC Access Control</span>
+              <span class="text-xs font-mono text-slate-400">CSE 3292 Architecture</span>
+            </div>
+            <h2 class="font-display text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Role-Based Staff &amp; Administration Workspace</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mt-0.5">Switch roles below to demonstrate separated responsibilities: Station Masters update platforms, Data Managers propose schedule edits, and Admins approve changes.</p>
+          </div>
+
+          <!-- Role Pill Buttons -->
+          <div class="flex flex-wrap gap-2">
+            <button onclick="handleRoleChange('station_master')" id="pill-station_master" class="role-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition">
+              1. Station Master
+            </button>
+            <button onclick="handleRoleChange('data_manager')" id="pill-data_manager" class="role-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition">
+              2. Data Manager
+            </button>
+            <button onclick="handleRoleChange('admin')" id="pill-admin" class="role-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition">
+              3. System Admin
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Passenger Access Denied Warning (Shown if user stays on Passenger role while viewing Staff Portal) -->
+      <div id="staffAccessDenied" class="hidden bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-2xl mx-auto my-8">
+        <div class="w-12 h-12 rounded-full bg-bd-red/10 text-bd-red flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-lg text-slate-900">403 Forbidden — Passenger Role Restricted</h3>
+        <p class="text-sm text-slate-600 mt-1">You are currently logged in as <strong>Passenger (Tanvir Ahmed)</strong>. Passengers have read-only access to public schedules and cannot modify platforms or timetables.</p>
+        <div class="mt-4 flex flex-wrap justify-center gap-2">
+          <button onclick="handleRoleChange('station_master')" class="px-4 py-2 rounded-xl bg-bd-green text-white text-xs font-bold hover:bg-bd-greenDark transition">Switch to Station Master</button>
+          <button onclick="handleRoleChange('data_manager')" class="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition">Switch to Data Manager</button>
+          <button onclick="handleRoleChange('admin')" class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition">Switch to System Admin</button>
+        </div>
+      </div>
+
+      <!-- ROLE A: STATION MASTER PANEL (Assigned Station: Dhaka Kamalapur) -->
+      <div id="panel-station_master" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 bg-bd-green text-white flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span class="text-[11px] font-mono uppercase tracking-wider text-emerald-200">Assigned Station Jurisdiction</span>
+              <h3 class="font-display text-lg font-bold">Dhaka Kamalapur Railway Station — Platform Control</h3>
+            </div>
+            <div class="text-xs bg-white/15 px-3 py-1.5 rounded-lg font-medium">
+              Staff: <strong>SM Rafiqul Islam</strong> (ID: SM-DHK-04)
+            </div>
+          </div>
+
+          <div class="p-4 sm:p-6 overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[680px]">
+              <thead>
+                <tr class="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th class="pb-3 pr-4">Train &amp; Number</th>
+                  <th class="pb-3 px-4">Route</th>
+                  <th class="pb-3 px-4">Departure</th>
+                  <th class="pb-3 px-4">Current Status</th>
+                  <th class="pb-3 px-4">Assign Platform</th>
+                  <th class="pb-3 pl-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="stationMasterTableBody" class="divide-y divide-slate-100 text-sm">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLE B: DATA MANAGER PANEL (Timetable Editor -> Pending Admin Approval) -->
+      <div id="panel-data_manager" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-amber-600">Timetable Version Control</span>
+              <h3 class="font-display text-lg font-bold text-slate-900">Propose Schedule / Delay Modification</h3>
+            </div>
+            <span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">Requires Admin Approval</span>
+          </div>
+
+          <form onsubmit="submitTimetableProposal(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Select Intercity Train</label>
+              <select id="dmTrainSelect" onchange="populateDmFields()" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">New Departure Time</label>
+                <input type="text" id="dmDeparture" placeholder="e.g., 07:30 AM" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green" required />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">New Arrival Time</label>
+                <input type="text" id="dmArrival" placeholder="e.g., 12:45 PM" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green" required />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Operational Status / Delay Advisory</label>
+              <select id="dmStatus" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green">
+                <option value="On Time">On Time (Scheduled)</option>
+                <option value="Delayed (+25 mins)">Delayed (+25 mins due to track maintenance)</option>
+                <option value="Delayed (+40 mins)">Delayed (+40 mins due to dense fog)</option>
+                <option value="Rescheduled">Rescheduled (Special Timetable)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Change Justification Note</label>
+              <input type="text" id="dmReason" placeholder="e.g., Signal clearance delay near Bhairab Bazar" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-bd-green" required />
+            </div>
+
+            <button type="submit" class="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-sm transition">
+              Submit Timetable Edit for Admin Approval
+            </button>
+          </form>
+        </div>
+
+        <!-- Submitted Proposals Queue (Read-only tracker for Data Manager) -->
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 class="font-display text-lg font-bold text-slate-900 mb-1">Your Submitted Timetable Proposals</h3>
+          <p class="text-xs text-slate-500 mb-4">Changes remain hidden from passengers until approved by a System Admin.</p>
+          <div id="dmProposalsList" class="space-y-3">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLE C: SYSTEM ADMIN PANEL (Approval Queue + Audit Log) -->
+      <div id="panel-admin" class="hidden space-y-6">
+        <!-- Pending Timetable Approvals -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400">Governance &amp; Verification</span>
+              <h3 class="font-display text-lg font-bold">Timetable Change Approval Queue</h3>
+            </div>
+            <span id="pendingCountBadge" class="px-3 py-1 rounded-full bg-bd-red text-white text-xs font-bold">1 Pending</span>
+          </div>
+          <div id="adminApprovalQueue" class="p-6 divide-y divide-slate-100">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Shared Audit Log (Visible to all Staff/Admin roles for transparency) -->
+      <div id="sharedAuditLogCard" class="hidden mt-6 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 class="font-display font-bold text-base text-slate-900">Immutable System Audit Log</h3>
+            <p class="text-xs text-slate-500">Tracks every Station Master platform assignment and Admin timetable approval</p>
+          </div>
+          <span class="text-xs font-mono text-bd-green font-semibold">audit_logs table</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th class="py-2.5 px-6">Timestamp</th>
+                <th class="py-2.5 px-4">Actor &amp; Role</th>
+                <th class="py-2.5 px-4">Action Type</th>
+                <th class="py-2.5 px-6">Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogTableBody" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ROUTE & INTERMEDIATE STOPS DRAWER / MODAL -->
+  <div id="routeModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end sm:items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <!-- Backdrop -->
+      <div onclick="closeRouteModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"></div>
+
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+      <!-- Modal Content -->
+      <div class="relative inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full border border-slate-200">
+        <div id="routeModalContent">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 text-slate-300 border-t border-slate-800 mt-12">
+    <div class="track-divider w-full opacity-80"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-bd-red"></span>
+            <span class="font-display font-bold text-white text-base">BD Train Tracker — Open-Source Railway Information System</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1.5 max-w-xl">
+            Developed for <strong>CSE 3292: Software Development III</strong> • Free, non-commercial passenger information portal featuring normalized PostgreSQL relational design &amp; Role-Based Access Control (RBAC).
+          </p>
+        </div>
+
+        <div class="text-xs text-slate-400 space-y-1 md:text-right">
+          <p class="font-semibold text-slate-200">Team Members:</p>
+          <p>Masuma Islam Sadia (41240101987) • MD Farhadul Islam Badhon (41240102097)</p>
+          <p class="text-[11px] text-slate-500">Supervisors: MD Tahsin Rahman &amp; MD Mahadi Hasan</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- APPLICATION STATE & INTERACTIVE LOGIC -->
+  <script>
+    // =========================================================================
+    // 1. INITIAL RELATIONAL MOCK DATA (Mirrors PostgreSQL ERD Tables)
+    // =========================================================================
+    let currentRole = 'passenger'; // 'passenger' | 'station_master' | 'data_manager' | 'admin'
+    let activeTab = 'passenger';
+
+    const roleMetadata = {
+      passenger: {
+        name: 'Tanvir Ahmed',
+        title: 'Passenger',
+        banner: 'Logged in as <strong>Tanvir Ahmed (Passenger)</strong> — Search schedules, verify platform numbers & subscribe to train alerts.'
+      },
+      station_master: {
+        name: 'SM Rafiqul Islam',
+        title: 'Station Master (Dhaka Kamalapur)',
+        banner: 'Logged in as <strong>SM Rafiqul Islam (Station Master — Dhaka Kamalapur)</strong> — Authorized to assign & confirm platform numbers.'
+      },
+      data_manager: {
+        name: 'Nusrat Jahan',
+        title: 'Data Manager',
+        banner: 'Logged in as <strong>Nusrat Jahan (Data Manager)</strong> — Authorized to edit timetable versions & submit for Admin approval.'
+      },
+      admin: {
+        name: 'Masuma Sadia',
+        title: 'System Administrator',
+        banner: 'Logged in as <strong>Masuma Sadia (System Admin)</strong> — Full governance over timetable approvals, RBAC & system audit logs.'
+      }
+    };
+
+    const stationWeather = [
+      {
+        station: 'Dhaka Kamalapur',
+        region: 'Dhaka Division',
+        temp: '24°C',
+        condition: 'Partly Cloudy',
+        visibility: 'Clear (6.5 km) • Normal Speed',
+        advisory: 'Optimal rail visibility across Dhaka–Tongi corridor.',
+        icon: '⛅',
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        updatedAt: '5 mins ago'
+      },
+      {
+        station: 'Chattogram',
+        region: 'Port City Hub',
+        temp: '27°C',
+        condition: 'Light Coastal Breeze',
+        visibility: 'Clear (8.0 km) • Normal Speed',
+        advisory: 'No weather delays on Pahartali–Chattogram line.',
+        icon: '🌤️',
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        updatedAt: '8 mins ago'
+      },
+      {
+        station: 'Sylhet',
+        region: 'North-East Zone',
+        temp: '20°C',
+        condition: 'Light Mist & Drizzle',
+        visibility: 'Moderate (2.8 km) • Caution',
+        advisory: 'Mild mist near Sreemangal hills; +10m buffer advised.',
+        icon: '🌧️',
+        badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+        updatedAt: '3 mins ago'
+      },
+      {
+        station: 'Rajshahi',
+        region: 'West Zone Hub',
+        temp: '19°C',
+        condition: 'Early Evening Haze',
+        visibility: 'Moderate (3.2 km) • Caution',
+        advisory: 'Haze near Jamuna Bridge; signal monitoring active.',
+        icon: '🌫️',
+        badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+        updatedAt: '11 mins ago'
+      }
+    ];
+
+    let trainsData = [
+      {
+        id: '701',
+        name: 'Suborno Express',
+        type: 'Intercity Non-Stop',
+        from: 'Dhaka Kamalapur',
+        to: 'Chattogram',
+        departure: '04:30 PM',
+        arrival: '09:25 PM',
+        duration: '4h 55m',
+        offDay: 'Monday',
+        platform: 'Platform 03',
+        platformUpdatedBy: 'SM Rafiqul Islam',
+        platformUpdatedAt: '12 mins ago',
+        status: 'On Time',
+        subscribed: true,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '04:30 PM', halt: '—', platform: 'Platform 03' },
+          { station: 'Biman Bandar', arrival: '04:57 PM', departure: '05:02 PM', halt: '5 min', platform: 'Platform 01' },
+          { station: 'Chattogram', arrival: '09:25 PM', departure: 'Destination', halt: '—', platform: 'Platform 02' }
+        ]
+      },
+      {
+        id: '785',
+        name: 'Sonar Bangla Express',
+        type: 'Intercity Express',
+        from: 'Dhaka Kamalapur',
+        to: 'Chattogram',
+        departure: '07:00 AM',
+        arrival: '11:55 AM',
+        duration: '4h 55m',
+        offDay: 'Tuesday',
+        platform: 'Not announced',
+        platformUpdatedBy: 'Pending Staff Entry',
+        platformUpdatedAt: 'Awaiting update',
+        status: 'On Time',
+        subscribed: true,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '07:00 AM', halt: '—', platform: 'Not announced' },
+          { station: 'Biman Bandar', arrival: '07:28 AM', departure: '07:33 AM', halt: '5 min', platform: 'Platform 02' },
+          { station: 'Bhairab Bazar', arrival: '08:42 AM', departure: '08:45 AM', halt: '3 min', platform: 'Platform 01' },
+          { station: 'Comilla', arrival: '09:48 AM', departure: '09:50 AM', halt: '2 min', platform: 'Platform 02' },
+          { station: 'Feni', arrival: '10:35 AM', departure: '10:37 AM', halt: '2 min', platform: 'Platform 01' },
+          { station: 'Chattogram', arrival: '11:55 AM', departure: 'Destination', halt: '—', platform: 'Platform 04' }
+        ]
+      },
+      {
+        id: '709',
+        name: 'Parabat Express',
+        type: 'Intercity Express',
+        from: 'Dhaka Kamalapur',
+        to: 'Sylhet',
+        departure: '06:20 AM',
+        arrival: '01:00 PM',
+        duration: '6h 40m',
+        offDay: 'Tuesday',
+        platform: 'Platform 05',
+        platformUpdatedBy: 'SM Rafiqul Islam',
+        platformUpdatedAt: '28 mins ago',
+        status: 'On Time',
+        subscribed: false,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '06:20 AM', halt: '—', platform: 'Platform 05' },
+          { station: 'Biman Bandar', arrival: '06:48 AM', departure: '06:53 AM', halt: '5 min', platform: 'Platform 01' },
+          { station: 'Bhairab Bazar', arrival: '08:05 AM', departure: '08:08 AM', halt: '3 min', platform: 'Platform 02' },
+          { station: 'Akhaura', arrival: '08:52 AM', departure: '08:55 AM', halt: '3 min', platform: 'Platform 01' },
+          { station: 'Sreemangal', arrival: '10:45 AM', departure: '10:48 AM', halt: '3 min', platform: 'Platform 01' },
+          { station: 'Sylhet', arrival: '01:00 PM', departure: 'Destination', halt: '—', platform: 'Platform 01' }
+        ]
+      },
+      {
+        id: '753',
+        name: 'Silkcity Express',
+        type: 'Intercity Express',
+        from: 'Dhaka Kamalapur',
+        to: 'Rajshahi',
+        departure: '02:30 PM',
+        arrival: '08:20 PM',
+        duration: '5h 50m',
+        offDay: 'Sunday',
+        platform: 'Not announced',
+        platformUpdatedBy: 'Pending Staff Entry',
+        platformUpdatedAt: 'Awaiting update',
+        status: 'On Time',
+        subscribed: false,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '02:30 PM', halt: '—', platform: 'Not announced' },
+          { station: 'Biman Bandar', arrival: '02:58 PM', departure: '03:03 PM', halt: '5 min', platform: 'Platform 02' },
+          { station: 'Joydebpur', arrival: '03:28 PM', departure: '03:31 PM', halt: '3 min', platform: 'Platform 01' },
+          { station: 'Tangail', arrival: '04:32 PM', departure: '04:34 PM', halt: '2 min', platform: 'Platform 01' },
+          { station: 'Ishwardi Bypass', arrival: '06:45 PM', departure: '06:48 PM', halt: '3 min', platform: 'Platform 02' },
+          { station: 'Rajshahi', arrival: '08:20 PM', departure: 'Destination', halt: '—', platform: 'Platform 03' }
+        ]
+      },
+      {
+        id: '725',
+        name: 'Sundarban Express',
+        type: 'Intercity Express',
+        from: 'Dhaka Kamalapur',
+        to: 'Khulna',
+        departure: '08:00 AM',
+        arrival: '03:40 PM',
+        duration: '7h 40m',
+        offDay: 'Wednesday',
+        platform: 'Platform 06',
+        platformUpdatedBy: 'SM Rafiqul Islam',
+        platformUpdatedAt: '41 mins ago',
+        status: 'On Time',
+        subscribed: false,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '08:00 AM', halt: '—', platform: 'Platform 06' },
+          { station: 'Biman Bandar', arrival: '08:27 AM', departure: '08:32 AM', halt: '5 min', platform: 'Platform 01' },
+          { station: 'Faridpur', arrival: '10:35 AM', departure: '10:38 AM', halt: '3 min', platform: 'Platform 01' },
+          { station: 'Jashore', arrival: '02:20 PM', departure: '02:25 PM', halt: '5 min', platform: 'Platform 02' },
+          { station: 'Khulna', arrival: '03:40 PM', departure: 'Destination', halt: '—', platform: 'Platform 01' }
+        ]
+      },
+      {
+        id: '705',
+        name: 'Ekota Express',
+        type: 'Intercity Express',
+        from: 'Dhaka Kamalapur',
+        to: 'Dinajpur',
+        departure: '10:15 AM',
+        arrival: '07:20 PM',
+        duration: '9h 05m',
+        offDay: 'Tuesday',
+        platform: 'Platform 02',
+        platformUpdatedBy: 'SM Rafiqul Islam',
+        platformUpdatedAt: '1 hr ago',
+        status: 'On Time',
+        subscribed: false,
+        stops: [
+          { station: 'Dhaka Kamalapur', arrival: 'Origin', departure: '10:15 AM', halt: '—', platform: 'Platform 02' },
+          { station: 'Biman Bandar', arrival: '10:42 AM', departure: '10:47 AM', halt: '5 min', platform: 'Platform 01' },
+          { station: 'Santahar', arrival: '04:15 PM', departure: '04:20 PM', halt: '5 min', platform: 'Platform 02' },
+          { station: 'Parbatipur', arrival: '06:25 PM', departure: '06:35 PM', halt: '10 min', platform: 'Platform 03' },
+          { station: 'Dinajpur', arrival: '07:20 PM', departure: 'Destination', halt: '—', platform: 'Platform 01' }
+        ]
+      }
+    ];
+
+    let pendingProposals = [
+      {
+        id: 'PROP-104',
+        trainId: '785',
+        trainName: 'Sonar Bangla Express',
+        proposedBy: 'Nusrat Jahan (Data Manager)',
+        oldDeparture: '07:00 AM',
+        newDeparture: '07:15 AM',
+        newArrival: '12:10 PM',
+        newStatus: 'Delayed (+15 mins)',
+        reason: 'Track maintenance speed restriction between Tongi and Pubail.',
+        submittedAt: '14 mins ago',
+        approvalStatus: 'Pending'
+      }
+    ];
+
+    let notifications = [
+      {
+        id: 1,
+        title: 'Platform Confirmed: Suborno Express (#701)',
+        message: 'Assigned to Platform 03 at Dhaka Kamalapur by SM Rafiqul Islam.',
+        time: '12 mins ago',
+        type: 'platform',
+        unread: true
+      },
+      {
+        id: 2,
+        title: 'Weather Advisory: Sylhet Station',
+        message: 'Light mist & drizzle reported (Visibility 2.8 km). Trains operating with caution.',
+        time: '25 mins ago',
+        type: 'weather',
+        unread: true
+      },
+      {
+        id: 3,
+        title: 'Subscription Active: Sonar Bangla (#785)',
+        message: 'You will be notified immediately once Dhaka Kamalapur platform is announced.',
+        time: '1 hr ago',
+        type: 'info',
+        unread: true
+      }
+    ];
+
+    let auditLogs = [
+      {
+        time: 'Today, 05:50 PM',
+        actor: 'SM Rafiqul Islam (Station Master)',
+        action: 'PLATFORM_UPDATE',
+        details: 'Confirmed Suborno Express (#701) at Dhaka Kamalapur → Platform 03'
+      },
+      {
+        time: 'Today, 05:34 PM',
+        actor: 'Nusrat Jahan (Data Manager)',
+        action: 'TIMETABLE_PROPOSAL',
+        details: 'Submitted schedule revision #PROP-104 for Sonar Bangla Express (#785)'
+      },
+      {
+        time: 'Today, 05:05 PM',
+        actor: 'Masuma Sadia (System Admin)',
+        action: 'TIMETABLE_APPROVED',
+        details: 'Verified & published Parabat Express (#709) autumn timetable v2.1'
+      }
+    ];
+
+    // =========================================================================
+    // 2. NAVIGATION, ROLE SWITCHING & CLOCK
+    // =========================================================================
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const el = document.getElementById('liveClock');
+      if (el) el.textContent = `${timeStr} BST`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function switchTab(tabName) {
+      activeTab = tabName;
+      ['passenger', 'weather', 'staff'].forEach(t => {
+        const viewEl = document.getElementById(`view-${t}`);
+        const btnEl = document.getElementById(`tab-${t}`);
+        if (t === tabName) {
+          viewEl.classList.remove('hidden');
+          btnEl.classList.add('bg-white', 'text-bd-green', 'shadow-sm');
+          btnEl.classList.remove('text-slate-600');
+        } else {
+          viewEl.classList.add('hidden');
+          btnEl.classList.remove('bg-white', 'text-bd-green', 'shadow-sm');
+          btnEl.classList.add('text-slate-600');
+        }
+      });
+
+      if (tabName === 'weather') renderWeatherAndNotices();
+      if (tabName === 'staff') renderStaffPortal();
+    }
+
+    function handleRoleChange(newRole) {
+      currentRole = newRole;
+      document.getElementById('roleSelector').value = newRole;
+      document.getElementById('roleBannerText').innerHTML = roleMetadata[newRole].banner;
+
+      // Auto-navigate to Staff Portal if user selects a staff role for smoother demo
+      if (newRole !== 'passenger' && activeTab !== 'staff') {
+        switchTab('staff');
+      } else if (newRole === 'passenger' && activeTab === 'staff') {
+        renderStaffPortal();
+      } else {
+        renderStaffPortal();
+      }
+
+      showToast(`Switched RBAC Role to ${roleMetadata[newRole].title}`, 'info');
+    }
+
+    // =========================================================================
+    // 3. PASSENGER VIEW: SEARCH, FILTER & TRAIN CARDS
+    // =========================================================================
+    function applyQuickRoute(from, to) {
+      document.getElementById('fromStation').value = from;
+      document.getElementById('toStation').value = to;
+      renderTrainCards();
+    }
+
+    function swapStations() {
+      const fromEl = document.getElementById('fromStation');
+      const toEl = document.getElementById('toStation');
+      const temp = fromEl.value;
+      fromEl.value = toEl.value;
+      toEl.value = temp;
+      renderTrainCards();
+    }
+
+    function handleTrainSearch(e) {
+      e.preventDefault();
+      renderTrainCards();
+      showToast('Updated train schedules from central database.', 'success');
+    }
+
+    function getWeatherForStation(stationName) {
+      const found = stationWeather.find(w => w.station.toLowerCase().includes(stationName.toLowerCase()));
+      return found || { temp: '24°C', icon: '⛅', condition: 'Clear' };
+    }
+
+    function renderTrainCards() {
+      const fromVal = document.getElementById('fromStation').value;
+      const toVal = document.getElementById('toStation').value;
+      const filterVal = document.getElementById('platformFilter').value;
+
+      let filtered = trainsData.filter(train => {
+        const matchFrom = fromVal === 'All' || train.from === fromVal || train.stops.some(s => s.station === fromVal);
+        const matchTo = toVal === 'All' || train.to === toVal || train.stops.some(s => s.station === toVal);
+        if (!matchFrom || !matchTo) return false;
+        if (fromVal !== 'All' && toVal !== 'All' && fromVal === toVal) return false;
+
+        if (filterVal === 'announced' && train.platform === 'Not announced') return false;
+        if (filterVal === 'subscribed' && !train.subscribed) return false;
+        return true;
+      });
+
+      document.getElementById('resultsCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'Train' : 'Trains'}`;
+      const container = document.getElementById('trainCardsContainer');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-10 text-center">
+            <p class="font-display font-bold text-lg text-slate-800">No trains matched this route or filter</p>
+            <p class="text-sm text-slate-500 mt-1">Try selecting "All Destinations" or clicking one of the Popular Route chips above.</p>
+            <button onclick="applyQuickRoute('Dhaka Kamalapur', 'All')" class="mt-4 px-4 py-2 rounded-xl bg-bd-green text-white text-xs font-bold">Reset Search</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(train => {
+        const isAnnounced = train.platform !== 'Not announced';
+        const platformBadge = isAnnounced
+          ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono text-xs font-bold bg-bd-greenLight text-bd-green border border-bd-green/30">
+               <span class="w-2 h-2 rounded-full bg-bd-green"></span>${train.platform}
+             </span>`
+          : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+               <span class="w-2 h-2 rounded-full bg-amber-500"></span>Not announced
+             </span>`;
+
+        const statusBadge = train.status === 'On Time'
+          ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">On Time</span>`
+          : `<span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-red-50 text-bd-red border border-red-200">${train.status}</span>`;
+
+        const originWeather = getWeatherForStation(train.from);
+
+        return `
+          <article class="bg-white rounded-2xl border border-slate-200/90 hover:border-bd-green/40 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
+            <div>
+              <!-- Top Row: Train Name, Number & Off-Day -->
+              <div class="flex flex-wrap items-start justify-between gap-2 pb-3.5 border-b border-slate-100">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-slate-900 text-white">#${train.id}</span>
+                    <h3 class="font-display font-extrabold text-lg text-slate-900">${train.name}</h3>
+                    ${statusBadge}
+                  </div>
+                  <p class="text-xs text-slate-500 mt-1">${train.type} • Off-day: <span class="font-semibold text-slate-700">${train.offDay}</span></p>
+                </div>
+
+                <!-- Platform Pill -->
+                <div class="text-right">
+                  ${platformBadge}
+                  <p class="text-[10px] text-slate-400 mt-1">${isAnnounced ? `Confirmed • ${train.platformUpdatedAt}` : 'Updated by Station Master'}</p>
+                </div>
+              </div>
+
+              <!-- Middle Row: Departure -> Duration -> Arrival -->
+              <div class="grid grid-cols-3 items-center gap-2 py-4">
+                <div>
+                  <p class="font-mono text-base sm:text-lg font-bold text-slate-900">${train.departure}</p>
+                  <p class="text-xs font-semibold text-slate-700 truncate">${train.from}</p>
+                  <span class="inline-flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">${originWeather.icon} ${originWeather.temp}</span>
+                </div>
+
+                <div class="flex flex-col items-center justify-center px-2">
+                  <span class="font-mono text-[11px] font-semibold text-slate-500 mb-1">${train.duration}</span>
+                  <div class="w-full flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full border-2 border-bd-green bg-white"></span>
+                    <div class="flex-1 h-[2px] bg-slate-300 relative">
+                      <span class="absolute inset-x-0 -top-[1px] h-[2px] bg-bd-green/60"></span>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-bd-red"></span>
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1">${train.stops.length} Stations</span>
+                </div>
+
+                <div class="text-right">
+                  <p class="font-mono text-base sm:text-lg font-bold text-slate-900">${train.arrival}</p>
+                  <p class="text-xs font-semibold text-slate-700 truncate">${train.to}</p>
+                  <span class="text-[11px] text-slate-400">Est. Arrival</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <button onclick="toggleSubscription('${train.id}')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition ${
+                train.subscribed
+                  ? 'bg-red-50 text-bd-red border-red-200 hover:bg-red-100'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }">
+                <svg class="w-3.5 h-3.5" fill="${train.subscribed ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <span>${train.subscribed ? 'Subscribed to Alerts' : 'Subscribe for Alerts'}</span>
+              </button>
+
+              <button onclick="openRouteModal('${train.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-bd-greenLight hover:bg-bd-green text-bd-green hover:text-white text-xs font-bold transition">
+                <span>View Route &amp; Stops</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function toggleSubscription(trainId) {
+      const train = trainsData.find(t => t.id === trainId);
+      if (!train) return;
+      train.subscribed = !train.subscribed;
+      renderTrainCards();
+
+      if (train.subscribed) {
+        addNotification(
+          `Subscribed: ${train.name} (#${train.id})`,
+          `You will receive instant alerts for platform updates & delays on ${train.from} → ${train.to}.`,
+          'info'
+        );
+        showToast(`Subscribed to ${train.name} (#${train.id}) alerts!`, 'success');
+      } else {
+        showToast(`Unsubscribed from ${train.name} (#${train.id}).`, 'info');
+      }
+    }
+
+    // =========================================================================
+    // 4. ROUTE & INTERMEDIATE STOPS MODAL
+    // =========================================================================
+    function openRouteModal(trainId) {
+      const train = trainsData.find(t => t.id === trainId);
+      if (!train) return;
+
+      const stopsHtml = train.stops.map((stop, idx) => {
+        const isFirst = idx === 0;
+        const isLast = idx === train.stops.length - 1;
+        const stopPlatClass = stop.platform === 'Not announced'
+          ? 'bg-amber-50 text-amber-800 border-amber-200'
+          : 'bg-bd-greenLight text-bd-green border-bd-green/30';
+
+        return `
+          <div class="relative pl-8 pb-6 ${isLast ? 'pb-1' : ''}">
+            ${!isLast ? '<span class="absolute left-[11px] top-5 bottom-0 w-0.5 bg-slate-200"></span>' : ''}
+            <span class="absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-mono font-bold ${
+              isFirst ? 'bg-bd-green text-white' : isLast ? 'bg-bd-red text-white' : 'bg-white border-2 border-bd-green text-bd-green'
+            }">${idx + 1}</span>
+
+            <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900">${stop.station}</h4>
+                <p class="text-xs text-slate-500 mt-0.5 font-mono">
+                  Arr: <strong class="text-slate-700">${stop.arrival}</strong> • Dep: <strong class="text-slate-700">${stop.departure}</strong> • Halt: ${stop.halt}
+                </p>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg font-mono text-xs font-bold border ${stopPlatClass}">
+                ${stop.platform}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('routeModalContent').innerHTML = `
+        <div class="px-6 py-4 bg-bd-green text-white flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-white/20">#${train.id}</span>
+              <h3 class="font-display text-lg font-extrabold">${train.name} — Intermediate Stops</h3>
+            </div>
+            <p class="text-xs text-emerald-100 mt-0.5">${train.from} to ${train.to} • Total Duration: ${train.duration}</p>
+          </div>
+          <button onclick="closeRouteModal()" class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="p-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+          <div class="mb-4 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2">
+            <span><strong>Audit Metadata:</strong> Origin platform ${train.platform === 'Not announced' ? 'awaiting Station Master entry' : `confirmed by ${train.platformUpdatedBy}`}</span>
+            <span class="font-mono text-[11px] text-amber-700">${train.platformUpdatedAt}</span>
+          </div>
+          <div class="mt-2">
+            ${stopsHtml}
+          </div>
+        </div>
+
+        <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+          <button onclick="closeRouteModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition">Close Timeline</button>
+        </div>
+      `;
+
+      document.getElementById('routeModal').classList.remove('hidden');
+    }
+
+    function closeRouteModal() {
+      document.getElementById('routeModal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 5. STATION WEATHER & OFFICIAL NOTICES VIEW
+    // =========================================================================
+    function renderWeatherAndNotices() {
+      const grid = document.getElementById('weatherCardsGrid');
+      grid.innerHTML = stationWeather.map(w => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="font-display font-bold text-base text-slate-900">${w.station}</h3>
+                <p class="text-xs text-slate-500">${w.region}</p>
+              </div>
+              <span class="text-3xl">${w.icon}</span>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+              <span class="font-mono text-2xl font-extrabold text-slate-900">${w.temp}</span>
+              <span class="text-xs font-semibold text-slate-600">${w.condition}</span>
+            </div>
+            <div class="mt-3">
+              <span class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${w.badgeColor}">
+                ${w.visibility}
+              </span>
+            </div>
+            <p class="text-xs text-slate-600 mt-3 leading-relaxed">${w.advisory}</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Weather API</span>
+            <span>Updated ${w.updatedAt}</span>
+          </div>
+        </div>
+      `).join('');
+
+      const noticesEl = document.getElementById('officialNoticesList');
+      noticesEl.innerHTML = notifications.map(n => `
+        <div class="p-5 flex items-start gap-3.5 hover:bg-slate-50/70 transition">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            n.type === 'platform' ? 'bg-bd-greenLight text-bd-green' :
+            n.type === 'weather' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-bd-red'
+          }">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h4 class="font-bold text-sm text-slate-900">${n.title}</h4>
+              <span class="font-mono text-[11px] text-slate-400">${n.time}</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1">${n.message}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 6. STAFF & ADMIN PORTAL (RBAC WORKFLOWS)
+    // =========================================================================
+    function renderStaffPortal() {
+      // Update Role Pill styling
+      ['station_master', 'data_manager', 'admin'].forEach(r => {
+        const pill = document.getElementById(`pill-${r}`);
+        if (r === currentRole) {
+          pill.className = 'role-pill px-3.5 py-2 rounded-xl text-xs font-bold border bg-bd-green text-white border-bd-green shadow-sm';
+        } else {
+          pill.className = 'role-pill px-3.5 py-2 rounded-xl text-xs font-bold border bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100';
+        }
+      });
+
+      const deniedEl = document.getElementById('staffAccessDenied');
+      const smPanel = document.getElementById('panel-station_master');
+      const dmPanel = document.getElementById('panel-data_manager');
+      const adminPanel = document.getElementById('panel-admin');
+      const auditCard = document.getElementById('sharedAuditLogCard');
+
+      deniedEl.classList.add('hidden');
+      smPanel.classList.add('hidden');
+      dmPanel.classList.add('hidden');
+      adminPanel.classList.add('hidden');
+      auditCard.classList.add('hidden');
+
+      if (currentRole === 'passenger') {
+        deniedEl.classList.remove('hidden');
+        return;
+      }
+
+      auditCard.classList.remove('hidden');
+      renderAuditLogTable();
+
+      if (currentRole === 'station_master') {
+        smPanel.classList.remove('hidden');
+        renderStationMasterTable();
+      } else if (currentRole === 'data_manager') {
+        dmPanel.classList.remove('hidden');
+        renderDataManagerPanel();
+      } else if (currentRole === 'admin') {
+        adminPanel.classList.remove('hidden');
+        renderAdminApprovalQueue();
+      }
+    }
+
+    // --- Station Master Platform Update Workflow ---
+    function renderStationMasterTable() {
+      const tbody = document.getElementById('stationMasterTableBody');
+      tbody.innerHTML = trainsData.map(train => {
+        const isAnnounced = train.platform !== 'Not announced';
+        return `
+          <tr class="hover:bg-slate-50/80">
+            <td class="py-3.5 pr-4">
+              <div class="font-bold text-slate-900">${train.name}</div>
+              <div class="font-mono text-xs text-slate-500">#${train.id}</div>
+            </td>
+            <td class="py-3.5 px-4 text-xs font-medium text-slate-700">${train.from} → ${train.to}</td>
+            <td class="py-3.5 px-4 font-mono text-xs font-bold text-slate-800">${train.departure}</td>
+            <td class="py-3.5 px-4">
+              <span class="inline-block px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${
+                isAnnounced ? 'bg-bd-greenLight text-bd-green' : 'bg-amber-50 text-amber-800'
+              }">${train.platform}</span>
+              <div class="text-[10px] text-slate-400 mt-0.5">${train.platformUpdatedAt}</div>
+            </td>
+            <td class="py-3.5 px-4">
+              <select id="sm-select-${train.id}" class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-mono font-semibold text-slate-800 focus:ring-2 focus:ring-bd-green">
+                <option value="Not announced" ${train.platform === 'Not announced' ? 'selected' : ''}>Not announced</option>
+                <option value="Platform 01" ${train.platform === 'Platform 01' ? 'selected' : ''}>Platform 01</option>
+                <option value="Platform 02" ${train.platform === 'Platform 02' ? 'selected' : ''}>Platform 02</option>
+                <option value="Platform 03" ${train.platform === 'Platform 03' ? 'selected' : ''}>Platform 03</option>
+                <option value="Platform 04" ${train.platform === 'Platform 04' ? 'selected' : ''}>Platform 04</option>
+                <option value="Platform 05" ${train.platform === 'Platform 05' ? 'selected' : ''}>Platform 05</option>
+                <option value="Platform 06" ${train.platform === 'Platform 06' ? 'selected' : ''}>Platform 06</option>
+                <option value="Platform 07" ${train.platform === 'Platform 07' ? 'selected' : ''}>Platform 07</option>
+              </select>
+            </td>
+            <td class="py-3.5 pl-4 text-right">
+              <button onclick="savePlatformUpdate('${train.id}')" class="px-3.5 py-1.5 rounded-lg bg-bd-green hover:bg-bd-greenDark text-white text-xs font-bold shadow-xs transition">
+                Save &amp; Publish
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function savePlatformUpdate(trainId) {
+      const selectEl = document.getElementById(`sm-select-${trainId}`);
+      const newPlatform = selectEl.value;
+      const train = trainsData.find(t => t.id === trainId);
+      if (!train) return;
+
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      train.platform = newPlatform;
+      train.platformUpdatedBy = 'SM Rafiqul Islam';
+      train.platformUpdatedAt = `Just now (${nowTime})`;
+
+      // Also update origin stop in stops array
+      if (train.stops && train.stops.length > 0) {
+        train.stops[0].platform = newPlatform;
+      }
+
+      // Log to Audit Trail
+      auditLogs.unshift({
+        time: `Today, ${nowTime}`,
+        actor: 'SM Rafiqul Islam (Station Master)',
+        action: 'PLATFORM_UPDATE',
+        details: `Updated ${train.name} (#${train.id}) at Dhaka Kamalapur → ${newPlatform}`
+      });
+
+      // Notify Subscribed Passengers
+      if (train.subscribed) {
+        addNotification(
+          `Platform Update: ${train.name} (#${train.id})`,
+          `Dhaka Kamalapur departure platform updated to ${newPlatform} by SM Rafiqul Islam.`,
+          'platform'
+        );
+      }
+
+      renderStationMasterTable();
+      renderAuditLogTable();
+      renderTrainCards();
+      showToast(`Published ${newPlatform} for ${train.name} (#${train.id})!`, 'success');
+    }
+
+    // --- Data Manager Timetable Edit Proposal Workflow ---
+    function renderDataManagerPanel() {
+      const select = document.getElementById('dmTrainSelect');
+      if (select.options.length === 0) {
+        select.innerHTML = trainsData.map(t => `<option value="${t.id}">#${t.id} — ${t.name} (${t.from} → ${t.to})</option>`).join('');
+      }
+      populateDmFields();
+
+      const listEl = document.getElementById('dmProposalsList');
+      listEl.innerHTML = pendingProposals.map(p => {
+        const badge = p.approvalStatus === 'Pending'
+          ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">Pending Admin Approval</span>`
+          : p.approvalStatus === 'Approved'
+          ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">Approved &amp; Live</span>`
+          : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-bd-red">Rejected</span>`;
+
+        return `
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-sm text-slate-900">${p.trainName} (#${p.trainId})</span>
+              ${badge}
+            </div>
+            <p class="text-xs font-mono text-slate-700 mt-1">Dep: ${p.oldDeparture} → <strong>${p.newDeparture}</strong> | Status: <strong>${p.newStatus}</strong></p>
+            <p class="text-xs text-slate-500 mt-1">Reason: ${p.reason}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function populateDmFields() {
+      const id = document.getElementById('dmTrainSelect').value;
+      const train = trainsData.find(t => t.id === id);
+      if (!train) return;
+      document.getElementById('dmDeparture').value = train.departure;
+      document.getElementById('dmArrival').value = train.arrival;
+    }
+
+    function submitTimetableProposal(e) {
+      e.preventDefault();
+      const trainId = document.getElementById('dmTrainSelect').value;
+      const train = trainsData.find(t => t.id === trainId);
+      const newDep = document.getElementById('dmDeparture').value.trim();
+      const newArr = document.getElementById('dmArrival').value.trim();
+      const newStat = document.getElementById('dmStatus').value;
+      const reason = document.getElementById('dmReason').value.trim();
+
+      const propId = `PROP-${Math.floor(105 + Math.random() * 890)}`;
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      pendingProposals.unshift({
+        id: propId,
+        trainId: train.id,
+        trainName: train.name,
+        proposedBy: 'Nusrat Jahan (Data Manager)',
+        oldDeparture: train.departure,
+        newDeparture: newDep,
+        newArrival: newArr,
+        newStatus: newStat,
+        reason: reason,
+        submittedAt: `Just now (${nowTime})`,
+        approvalStatus: 'Pending'
+      });
+
+      auditLogs.unshift({
+        time: `Today, ${nowTime}`,
+        actor: 'Nusrat Jahan (Data Manager)',
+        action: 'TIMETABLE_PROPOSAL',
+        details: `Submitted ${propId} for ${train.name} (#${train.id}) — awaiting Admin approval`
+      });
+
+      document.getElementById('dmReason').value = '';
+      renderDataManagerPanel();
+      renderAuditLogTable();
+      showToast(`Proposal ${propId} submitted! Switch to System Admin to approve.`, 'info');
+    }
+
+    // --- System Admin Approval Queue Workflow ---
+    function renderAdminApprovalQueue() {
+      const pendingItems = pendingProposals.filter(p => p.approvalStatus === 'Pending');
+      document.getElementById('pendingCountBadge').textContent = `${pendingItems.length} Pending`;
+
+      const queueEl = document.getElementById('adminApprovalQueue');
+      if (pendingProposals.length === 0) {
+        queueEl.innerHTML = `<p class="text-sm text-slate-500">No timetable proposals in the queue.</p>`;
+        return;
+      }
+
+      queueEl.innerHTML = pendingProposals.map(p => `
+        <div class="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800">${p.id}</span>
+              <h4 class="font-bold text-base text-slate-900">${p.trainName} (#${p.trainId})</h4>
+              <span class="text-xs text-slate-500">• Proposed by ${p.proposedBy} (${p.submittedAt})</span>
+            </div>
+            <div class="mt-1.5 text-xs sm:text-sm text-slate-700 font-mono">
+              Departure: <span class="line-through text-slate-400">${p.oldDeparture}</span> → <strong class="text-bd-green">${p.newDeparture}</strong> | Arrival: <strong>${p.newArrival}</strong> | Status: <strong class="text-bd-red">${p.newStatus}</strong>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Justification: "${p.reason}"</p>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            ${p.approvalStatus === 'Pending' ? `
+              <button onclick="processProposal('${p.id}', 'Approved')" class="px-4 py-2 rounded-xl bg-bd-green hover:bg-bd-greenDark text-white text-xs font-bold shadow-xs transition">
+                Approve &amp; Publish
+              </button>
+              <button onclick="processProposal('${p.id}', 'Rejected')" class="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-bd-red border border-red-200 text-xs font-bold transition">
+                Reject
+              </button>
+            ` : `
+              <span class="px-3 py-1.5 rounded-xl text-xs font-bold ${
+                p.approvalStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-bd-red border border-red-200'
+              }">${p.approvalStatus}</span>
+            `}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function processProposal(propId, decision) {
+      const prop = pendingProposals.find(p => p.id === propId);
+      if (!prop) return;
+
+      prop.approvalStatus = decision;
+      const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      if (decision === 'Approved') {
+        const train = trainsData.find(t => t.id === prop.trainId);
+        if (train) {
+          train.departure = prop.newDeparture;
+          train.arrival = prop.newArrival;
+          train.status = prop.newStatus;
+          if (train.stops && train.stops.length > 0) {
+            train.stops[0].departure = prop.newDeparture;
+            train.stops[train.stops.length - 1].arrival = prop.newArrival;
+          }
+
+          if (train.subscribed) {
+            addNotification(
+              `Schedule Approved: ${train.name} (#${train.id})`,
+              `Updated departure: ${train.departure} (${train.status}). Approved by System Admin.`,
+              'info'
+            );
+          }
+        }
+      }
+
+      auditLogs.unshift({
+        time: `Today, ${nowTime}`,
+        actor: 'Masuma Sadia (System Admin)',
+        action: decision === 'Approved' ? 'TIMETABLE_APPROVED' : 'TIMETABLE_REJECTED',
+        details: `${decision} timetable revision ${prop.id} for ${prop.trainName} (#${prop.trainId})`
+      });
+
+      renderAdminApprovalQueue();
+      renderAuditLogTable();
+      renderTrainCards();
+      showToast(`Proposal ${prop.id} ${decision.toLowerCase()}!`, decision === 'Approved' ? 'success' : 'info');
+    }
+
+    function renderAuditLogTable() {
+      const tbody = document.getElementById('auditLogTableBody');
+      tbody.innerHTML = auditLogs.map(log => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-6 font-mono text-[11px] text-slate-500 whitespace-nowrap">${log.time}</td>
+          <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">${log.actor}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${log.action}</span>
+          </td>
+          <td class="py-3 px-6 text-slate-600">${log.details}</td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 7. NOTIFICATIONS & TOAST FEEDBACK
+    // =========================================================================
+    function addNotification(title, message, type = 'info') {
+      notifications.unshift({
+        id: Date.now(),
+        title,
+        message,
+        time: 'Just now',
+        type,
+        unread: true
+      });
+      renderNotifications();
+    }
+
+    function renderNotifications() {
+      const unreadCount = notifications.filter(n => n.unread).length;
+      const badge = document.getElementById('notifBadge');
+      badge.textContent = unreadCount;
+      badge.classList.toggle('hidden', unreadCount === 0);
+
+      const list = document.getElementById('notifList');
+      list.innerHTML = notifications.map(n => `
+        <div class="p-3.5 ${n.unread ? 'bg-bd-greenLight/40' : 'bg-white'} hover:bg-slate-50 transition">
+          <div class="flex items-start justify-between gap-2">
+            <p class="text-xs font-bold text-slate-900">${n.title}</p>
+            <span class="font-mono text-[10px] text-slate-400 shrink-0">${n.time}</span>
+          </div>
+          <p class="text-xs text-slate-600 mt-1">${n.message}</p>
+        </div>
+      `).join('');
+    }
+
+    function toggleNotifDrawer() {
+      const dd = document.getElementById('notifDropdown');
+      dd.classList.toggle('hidden');
+    }
+
+    function markAllRead() {
+      notifications.forEach(n => n.unread = false);
+      renderNotifications();
+    }
+
+    // Close notification dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dd = document.getElementById('notifDropdown');
+      const btn = document.getElementById('notifButton');
+      if (!dd.contains(e.target) && !btn.contains(e.target)) {
+        dd.classList.add('hidden');
+      }
+    });
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' ? 'bg-bd-green text-white' : 'bg-slate-900 text-white';
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-xs font-semibold ${bgClass} transform transition-all duration-300`;
+      toast.innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Initial Render on Page Load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTrainCards();
+      renderNotifications();
+      renderWeatherAndNotices();
+    });
+  </script>
+</body>
+</html>
